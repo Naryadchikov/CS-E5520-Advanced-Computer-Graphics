@@ -2,6 +2,10 @@
 #include "filesaves.hpp"
 
 #include <algorithm>
+#include <numeric>
+
+
+#define MAX_TRIS_PER_LEAF 3
 
 
 namespace FW
@@ -36,6 +40,26 @@ namespace FW
         rootNode_.reset(new BvhNode(loader));
     }
 
+    Bvh::Bvh(std::vector<RTTriangle>& triangles, SplitMode splitMode) : triangles_ptr(&triangles), mode_(splitMode),
+                                                                        indices_(triangles.size())
+    {
+        rootNode_.reset(new BvhNode(0, triangles.size() - 1));
+
+        std::iota(indices_.begin(), indices_.end(), 0);
+
+        switch (splitMode)
+        {
+        default:
+            std::stable_sort(indices_.begin(), indices_.end(),
+                             [&triangles](size_t i1, size_t i2)
+                             {
+                                 return triangles[i1].centroid().x < triangles[i2].centroid().x;
+                             });
+        }
+
+        constructTree(rootNode_);
+    }
+
     void Bvh::save(std::ostream& os)
     {
         // Save file header.
@@ -55,5 +79,52 @@ namespace FW
 
         // Save the rest.
         rootNode_->save(saver);
+    }
+
+    void Bvh::constructTree(std::unique_ptr<BvhNode>& node)
+    {
+        std::pair<Vec3f, Vec3f> bvPoints = getBVPoints(node->startPrim, node->endPrim);
+
+        node->bb = AABB(bvPoints.first, bvPoints.second);
+
+        if (node->endPrim - node->startPrim + 1 > MAX_TRIS_PER_LEAF)
+        {
+            size_t splitIndex = (node->endPrim + node->startPrim) / 2;
+
+            node->left.reset(new BvhNode(node->startPrim, splitIndex - 1));
+            constructTree(node->left);
+
+            node->right.reset(new BvhNode(splitIndex, node->endPrim));
+            constructTree(node->right);
+        }
+    }
+
+    std::pair<Vec3f, Vec3f> Bvh::getBVPoints(size_t startPrim, size_t endPrim)
+    {
+        Vec3f min(std::numeric_limits<float>::max());
+        Vec3f max(-std::numeric_limits<float>::max());
+
+        for (size_t i = startPrim; i <= endPrim; ++i)
+        {
+            for (const auto v : ((*triangles_ptr)[indices_[i]]).m_vertices)
+            {
+                Vec3f p = v.p;
+
+                for (int j = 0; j < 3; ++j)
+                {
+                    if (p[j] < min[j])
+                    {
+                        min[j] = p[j];
+                    }
+
+                    if (p[j] > max[j])
+                    {
+                        max[j] = p[j];
+                    }
+                }
+            }
+        }
+
+        return std::make_pair(min, max);
     }
 }

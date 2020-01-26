@@ -17,6 +17,7 @@ namespace FW
 
         Bvh();
         Bvh(std::istream& is);
+        Bvh(std::vector<RTTriangle>& triangles, SplitMode splitMode);
 
         // move assignment for performance
         Bvh& operator=(Bvh&& other)
@@ -36,10 +37,15 @@ namespace FW
 
     private:
 
-
         SplitMode mode_;
         std::unique_ptr<BvhNode> rootNode_;
 
         std::vector<uint32_t> indices_; // triangle index list that will be sorted during BVH construction
+
+        std::vector<RTTriangle>* triangles_ptr;
+
+        void constructTree(std::unique_ptr<BvhNode>& node);
+
+        std::pair<Vec3f, Vec3f> getBVPoints(size_t startPrim, size_t endPrim);
     };
 }
