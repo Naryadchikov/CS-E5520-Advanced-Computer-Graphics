@@ -126,14 +126,14 @@ namespace FW
 
     bool RayTracer::isIntersectedWithBB(const Vec3f& orig, const Vec3f& dir, const AABB& bb) const
     {
-		Vec3f iDir = 1.0f / dir;
-		Vec3f t1 = (bb.min - orig) * iDir;
-		Vec3f t2 = (bb.max - orig) * iDir;
+        Vec3f iDir = 1.0f / dir;
+        Vec3f t1 = (bb.min - orig) * iDir;
+        Vec3f t2 = (bb.max - orig) * iDir;
 
-		float min = FW::min(t1, t2).max();
-		float max = FW::max(t1, t2).min();
+        float min = FW::min(t1, t2).max();
+        float max = FW::max(t1, t2).min();
 
-		return min <= max && 0.0f <= max;
+        return min <= max && 0.0f <= max;
     }
 
     RaycastResult RayTracer::intersectTriangles(const Vec3f& orig, const Vec3f& dir, const size_t startPrim,
@@ -159,7 +159,8 @@ namespace FW
         }
 
         return imin != -1
-                   ? RaycastResult(&(*m_triangles)[m_bvh.getIndex(imin)], tmin, umin, vmin, orig + tmin * dir, orig, dir)
+                   ? RaycastResult(&(*m_triangles)[m_bvh.getIndex(imin)], tmin, umin, vmin, orig + tmin * dir, orig,
+                                   dir)
                    : RaycastResult();
     }
 } // namespace FW

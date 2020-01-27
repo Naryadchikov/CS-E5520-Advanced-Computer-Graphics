@@ -110,8 +110,8 @@ namespace FW
             {
                 Vec3f p = v.p;
 
-				min = FW::min(min, p);
-				max = FW::max(max, p);
+                min = FW::min(min, p);
+                max = FW::max(max, p);
             }
         }
 
