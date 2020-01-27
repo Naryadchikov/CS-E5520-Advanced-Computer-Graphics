@@ -126,73 +126,14 @@ namespace FW
 
     bool RayTracer::isIntersectedWithBB(const Vec3f& orig, const Vec3f& dir, const AABB& bb) const
     {
-        float min, max, yMin, yMax, zMin, zMax;
-        float dx = 1.0f / dir.x;
-        float dy = 1.0f / dir.y;
-        float dz = 1.0f / dir.z;
+		Vec3f iDir = 1.0f / dir;
+		Vec3f t1 = (bb.min - orig) * iDir;
+		Vec3f t2 = (bb.max - orig) * iDir;
 
-        if (dx >= 0)
-        {
-            min = (bb.min.x - orig.x) * dx;
-            max = (bb.max.x - orig.x) * dx;
-        }
-        else
-        {
-            min = (bb.max.x - orig.x) * dx;
-            max = (bb.min.x - orig.x) * dx;
-        }
+		float min = FW::min(t1, t2).max();
+		float max = FW::max(t1, t2).min();
 
-        if (dy >= 0)
-        {
-            yMin = (bb.min.y - orig.y) * dy;
-            yMax = (bb.max.y - orig.y) * dy;
-        }
-        else
-        {
-            yMin = (bb.max.y - orig.y) * dy;
-            yMax = (bb.min.y - orig.y) * dy;
-        }
-
-        if ((min > yMax) || (yMin > max))
-        {
-            return false;
-        }
-
-        if (yMin > min)
-        {
-            min = yMin;
-        }
-        if (yMax < max)
-        {
-            max = yMax;
-        }
-
-        if (dz >= 0)
-        {
-            zMin = (bb.min.z - orig.z) * dz;
-            zMax = (bb.max.z - orig.z) * dz;
-        }
-        else
-        {
-            zMin = (bb.max.z - orig.z) * dz;
-            zMax = (bb.min.z - orig.z) * dz;
-        }
-
-        if ((min > zMax) || (zMin > max))
-        {
-            return false;
-        }
-
-        if (zMin > min)
-        {
-            min = zMin;
-        }
-        if (zMax < max)
-        {
-            max = zMax;
-        }
-
-        return min < (dir - orig).length() && max > 0.0f ? true : false;
+		return min <= max && 0.0f <= max;
     }
 
     RaycastResult RayTracer::intersectTriangles(const Vec3f& orig, const Vec3f& dir, const size_t startPrim,
@@ -205,7 +146,7 @@ namespace FW
         {
             float t, u, v;
 
-            if ((*m_triangles)[i].intersect_woop(orig, dir, t, u, v))
+            if ((*m_triangles)[m_bvh.getIndex(i)].intersect_woop(orig, dir, t, u, v))
             {
                 if (t > 0.0f && t < tmin)
                 {
@@ -218,7 +159,7 @@ namespace FW
         }
 
         return imin != -1
-                   ? RaycastResult(&(*m_triangles)[imin], tmin, umin, vmin, orig + tmin * dir, orig, dir)
+                   ? RaycastResult(&(*m_triangles)[m_bvh.getIndex(imin)], tmin, umin, vmin, orig + tmin * dir, orig, dir)
                    : RaycastResult();
     }
 } // namespace FW

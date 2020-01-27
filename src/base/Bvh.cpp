@@ -110,18 +110,8 @@ namespace FW
             {
                 Vec3f p = v.p;
 
-                for (int j = 0; j < 3; ++j)
-                {
-                    if (p[j] < min[j])
-                    {
-                        min[j] = p[j];
-                    }
-
-                    if (p[j] > max[j])
-                    {
-                        max[j] = p[j];
-                    }
-                }
+				min = FW::min(min, p);
+				max = FW::max(max, p);
             }
         }
 
