@@ -47,14 +47,21 @@ namespace FW
 
         std::iota(indices_.begin(), indices_.end(), 0);
 
-        switch (splitMode)
+        switch (mode_)
         {
-        default:
-            std::stable_sort(indices_.begin(), indices_.end(),
-                             [&triangles](size_t i1, size_t i2)
-                             {
-                                 return triangles[i1].centroid().x < triangles[i2].centroid().x;
-                             });
+        case SplitMode_SpatialMedian:
+            {
+                break;
+            }
+        case SplitMode_ObjectMedian: default:
+            {
+                std::stable_sort(indices_.begin(), indices_.end(),
+                                 [&triangles](size_t i1, size_t i2)
+                                 {
+                                     return triangles[i1].centroid().x < triangles[i2].centroid().x;
+                                 });
+                break;
+            }
         }
 
         constructTree(rootNode_);
@@ -89,7 +96,48 @@ namespace FW
 
         if (node->endPrim - node->startPrim + 1 > MAX_TRIS_PER_LEAF)
         {
-            size_t splitIndex = (node->endPrim + node->startPrim) / 2;
+            size_t splitIndex;
+
+            switch (mode_)
+            {
+            case SplitMode_SpatialMedian:
+                {
+                    size_t longestAxis = 0;
+                    Vec3f bvDiagonal = bvPoints.second - bvPoints.first;
+                    float longestAxisDistance = bvDiagonal.max();
+
+                    if (bvDiagonal.y == longestAxisDistance)
+                    {
+                        longestAxis = 1;
+                    }
+                    if (bvDiagonal.z == longestAxisDistance)
+                    {
+                        longestAxis = 2;
+                    }
+
+                    splitIndex = std::stable_partition(indices_.begin() + node->startPrim,
+                                                       indices_.begin() + node->endPrim + 1,
+                                                       [&](size_t n)
+                                                       {
+                                                           return (*triangles_ptr)[indices_[n]].centroid()[longestAxis]
+                                                               <
+                                                               (bvPoints.second[longestAxis] +
+                                                                   bvPoints.first[longestAxis]) * 0.5f;
+                                                       }) - indices_.begin();
+
+                    if (splitIndex - 1 == node->endPrim || splitIndex == node->startPrim)
+                    {
+                        return;
+                    }
+
+                    break;
+                }
+            case SplitMode_ObjectMedian: default:
+                {
+                    splitIndex = (node->endPrim + node->startPrim) / 2;
+                    break;
+                }
+            }
 
             node->left.reset(new BvhNode(node->startPrim, splitIndex - 1));
             constructTree(node->left);
