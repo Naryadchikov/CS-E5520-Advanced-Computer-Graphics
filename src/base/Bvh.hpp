@@ -44,7 +44,9 @@ namespace FW
 
         std::vector<RTTriangle>* triangles_ptr;
 
-        void constructTree(std::unique_ptr<BvhNode>& node);
+        void constructTree_SpatialMedian(std::unique_ptr<BvhNode>& node);
+
+        void constructTree_ObjectMedian(std::unique_ptr<BvhNode>& node);
 
         std::pair<Vec3f, Vec3f> getBVPoints(size_t startPrim, size_t endPrim);
     };

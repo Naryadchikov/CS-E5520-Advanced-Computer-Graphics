@@ -51,6 +51,8 @@ namespace FW
         {
         case SplitMode_SpatialMedian:
             {
+                constructTree_SpatialMedian(rootNode_);
+
                 break;
             }
         case SplitMode_ObjectMedian: default:
@@ -60,11 +62,12 @@ namespace FW
                                  {
                                      return triangles[i1].centroid().x < triangles[i2].centroid().x;
                                  });
+
+                constructTree_ObjectMedian(rootNode_);
+
                 break;
             }
         }
-
-        constructTree(rootNode_);
     }
 
     void Bvh::save(std::ostream& os)
@@ -88,7 +91,7 @@ namespace FW
         rootNode_->save(saver);
     }
 
-    void Bvh::constructTree(std::unique_ptr<BvhNode>& node)
+    void Bvh::constructTree_ObjectMedian(std::unique_ptr<BvhNode>& node)
     {
         std::pair<Vec3f, Vec3f> bvPoints = getBVPoints(node->startPrim, node->endPrim);
 
@@ -96,54 +99,57 @@ namespace FW
 
         if (node->endPrim - node->startPrim + 1 > MAX_TRIS_PER_LEAF)
         {
-            size_t splitIndex;
+            size_t splitIndex = (node->endPrim + node->startPrim) / 2;
 
-            switch (mode_)
+            node->left.reset(new BvhNode(node->startPrim, splitIndex - 1));
+            constructTree_ObjectMedian(node->left);
+
+            node->right.reset(new BvhNode(splitIndex, node->endPrim));
+            constructTree_ObjectMedian(node->right);
+        }
+    }
+
+    void Bvh::constructTree_SpatialMedian(std::unique_ptr<BvhNode>& node)
+    {
+        std::pair<Vec3f, Vec3f> bvPoints = getBVPoints(node->startPrim, node->endPrim);
+
+        node->bb = AABB(bvPoints.first, bvPoints.second);
+
+        if (node->endPrim - node->startPrim + 1 > MAX_TRIS_PER_LEAF)
+        {
+            size_t longestAxis = 0;
+            Vec3f bvDiagonal = bvPoints.second - bvPoints.first;
+            float longestAxisDistance = bvDiagonal.max();
+
+            if (bvDiagonal.y == longestAxisDistance)
             {
-            case SplitMode_SpatialMedian:
-                {
-                    size_t longestAxis = 0;
-                    Vec3f bvDiagonal = bvPoints.second - bvPoints.first;
-                    float longestAxisDistance = bvDiagonal.max();
+                longestAxis = 1;
+            }
+            if (bvDiagonal.z == longestAxisDistance)
+            {
+                longestAxis = 2;
+            }
 
-                    if (bvDiagonal.y == longestAxisDistance)
-                    {
-                        longestAxis = 1;
-                    }
-                    if (bvDiagonal.z == longestAxisDistance)
-                    {
-                        longestAxis = 2;
-                    }
+            size_t splitIndex = std::stable_partition(indices_.begin() + node->startPrim,
+                                                      indices_.begin() + node->endPrim + 1,
+                                                      [&](size_t n)
+                                                      {
+                                                          return (*triangles_ptr)[indices_[n]].centroid()[longestAxis]
+                                                              <
+                                                              (bvPoints.second[longestAxis] +
+                                                                  bvPoints.first[longestAxis]) * 0.5f;
+                                                      }) - indices_.begin();
 
-                    splitIndex = std::stable_partition(indices_.begin() + node->startPrim,
-                                                       indices_.begin() + node->endPrim + 1,
-                                                       [&](size_t n)
-                                                       {
-                                                           return (*triangles_ptr)[indices_[n]].centroid()[longestAxis]
-                                                               <
-                                                               (bvPoints.second[longestAxis] +
-                                                                   bvPoints.first[longestAxis]) * 0.5f;
-                                                       }) - indices_.begin();
-
-                    if (splitIndex - 1 == node->endPrim || splitIndex == node->startPrim)
-                    {
-                        return;
-                    }
-
-                    break;
-                }
-            case SplitMode_ObjectMedian: default:
-                {
-                    splitIndex = (node->endPrim + node->startPrim) / 2;
-                    break;
-                }
+            if (splitIndex - 1 == node->endPrim || splitIndex == node->startPrim)
+            {
+                return;
             }
 
             node->left.reset(new BvhNode(node->startPrim, splitIndex - 1));
-            constructTree(node->left);
+            constructTree_SpatialMedian(node->left);
 
             node->right.reset(new BvhNode(splitIndex, node->endPrim));
-            constructTree(node->right);
+            constructTree_SpatialMedian(node->right);
         }
     }
 
