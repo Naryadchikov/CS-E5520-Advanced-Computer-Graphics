@@ -23,8 +23,27 @@ namespace FW
         // UV coordinates range from negative to positive infinity. First map them
         // to a range between 0 and 1 in order to support tiling textures, then
         // scale the coordinates by image resolution and find the nearest pixel.
+        float x, y, i;
 
-        return Vec2f();
+        if (std::abs(uv.x) == 1.f)
+        {
+            x = 1.f;
+        }
+        else
+        {
+            x = std::abs(std::modf(uv.x, &i));
+        }
+
+        if (std::abs(uv.y) == 1.f)
+        {
+            y = 1.f;
+        }
+        else
+        {
+            y = std::abs(std::modf(uv.y, &i));
+        }
+
+        return Vec2f(std::round(x * size.x), std::round(y * size.y));
     }
 
     Mat3f formBasis(const Vec3f& n)
