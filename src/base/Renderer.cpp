@@ -204,11 +204,41 @@ namespace FW
     Vec4f Renderer::computeShadingAmbientOcclusion(RayTracer* rt, const RaycastResult& hit,
                                                    const CameraControls& cameraCtrl, Random& rnd)
     {
-        Vec4f color;
+        Vec3f n(hit.tri->normal());
+        Vec3f fromSurfaceToCameraV = cameraCtrl.getPosition() - hit.point;
+        Vec3f nudgedHit = hit.point + 0.001f * fromSurfaceToCameraV;
 
-        // YOUR CODE HERE (R4)
+        if (FW::dot(n, fromSurfaceToCameraV) < 0.f)
+        {
+            n *= -1.f;
+        }
 
-        return color;
+        Mat3f R = formBasis(n);
+
+        int noRayHitCounter = 0;
+
+        for (int i = 0; i < m_aoNumRays; ++i)
+        {
+            Vec3f rd;
+
+            do
+            {
+                rd.x = rnd.getF32(-1.f, 1.f);
+                rd.y = rnd.getF32(-1.f, 1.f);
+            }
+            while ((rd.x * rd.x + rd.y * rd.y) > 1.f);
+
+            rd.z = FW::sqrt(1.f - (rd.x * rd.x) - (rd.y * rd.y));
+
+            rd = R * rd;
+
+            if (!rt->raycast(nudgedHit, m_aoRayLength * rd))
+            {
+                noRayHitCounter++;
+            }
+        }
+
+        return Vec4f((float)noRayHitCounter / m_aoNumRays, 1.f);
     }
 
     Vec4f Renderer::computeShadingWhitted(RayTracer* rt, const RaycastResult& hit, const CameraControls& cameraCtrl,

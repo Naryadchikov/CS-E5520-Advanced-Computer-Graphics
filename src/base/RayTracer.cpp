@@ -48,8 +48,29 @@ namespace FW
 
     Mat3f formBasis(const Vec3f& n)
     {
-        // YOUR CODE HERE (R4):
-        return Mat3f();
+        Vec3f q = n;
+        int idOfMin = 0;
+
+        for (int i = 1; i < 3; ++i)
+        {
+            if (FW::abs(n[idOfMin] > FW::abs(n[i])))
+            {
+                idOfMin = i;
+            }
+        }
+
+        q[idOfMin] = 1.f;
+
+        Vec3f t = (FW::cross(q, n)).normalized();
+        Vec3f b = (FW::cross(n, t)).normalized();
+
+        Mat3f R;
+
+        R.setCol(0, t);
+        R.setCol(1, b);
+        R.setCol(2, n);
+
+        return R;
     }
 
 
