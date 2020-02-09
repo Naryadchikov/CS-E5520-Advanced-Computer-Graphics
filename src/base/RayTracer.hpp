@@ -48,9 +48,9 @@ namespace FW
         mutable std::atomic<int> m_rayCount;
         Bvh m_bvh;
 
-        RaycastResult intersectNode(const Vec3f& orig, const Vec3f& dir, const BvhNode& node) const;
+        RaycastResult intersectNode(const Vec3f& orig, const Vec3f& dir, const BvhNode& node, float tMin) const;
 
-        bool isIntersectedWithBB(const Vec3f& orig, const Vec3f& dir, const AABB& bb) const;
+        bool isIntersectedWithBB(const Vec3f& orig, const Vec3f& dir, const AABB& bb, float tMin) const;
 
         RaycastResult intersectTriangles(const Vec3f& orig, const Vec3f& dir, const size_t startPrim, const size_t endPrim) const;
     };

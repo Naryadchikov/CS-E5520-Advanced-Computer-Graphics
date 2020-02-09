@@ -138,12 +138,14 @@ namespace FW
         // function with the given ray and your root node. You can also use this
         // function to do one-off things per ray like finding the elementwise
         // reciprocal of the ray direction.
-        return intersectNode(orig, dir, m_bvh.root());
+        float tMin = 0.f;
+
+        return intersectNode(orig, dir, m_bvh.root(), tMin);
     }
 
-    RaycastResult RayTracer::intersectNode(const Vec3f& orig, const Vec3f& dir, const BvhNode& node) const
+    RaycastResult RayTracer::intersectNode(const Vec3f& orig, const Vec3f& dir, const BvhNode& node, float tMin) const
     {
-        if (!isIntersectedWithBB(orig, dir, node.bb))
+        if (!isIntersectedWithBB(orig, dir, node.bb, tMin))
         {
             return RaycastResult();
         }
@@ -153,8 +155,8 @@ namespace FW
             return intersectTriangles(orig, dir, node.startPrim, node.endPrim);
         }
 
-        RaycastResult leftResult = intersectNode(orig, dir, *node.left);
-        RaycastResult rightResult = intersectNode(orig, dir, *node.right);
+        RaycastResult leftResult = intersectNode(orig, dir, *node.left, tMin);
+        RaycastResult rightResult = intersectNode(orig, dir, *node.right, tMin);
 
         if (!leftResult.tri && !rightResult.tri)
         {
@@ -164,16 +166,30 @@ namespace FW
         return leftResult.t < rightResult.t ? leftResult : rightResult;
     }
 
-    bool RayTracer::isIntersectedWithBB(const Vec3f& orig, const Vec3f& dir, const AABB& bb) const
+    bool RayTracer::isIntersectedWithBB(const Vec3f& orig, const Vec3f& dir, const AABB& bb, float tMin) const
     {
-        Vec3f iDir = 1.0f / dir;
+        Vec3f iDir = 1.f / dir;
         Vec3f t1 = (bb.min - orig) * iDir;
         Vec3f t2 = (bb.max - orig) * iDir;
 
-        float min = FW::min(t1, t2).max();
-        float max = FW::max(t1, t2).min();
+        float start = FW::min(t1, t2).max();
+        float end = FW::max(t1, t2).min();
 
-        return min <= max && 0.0f <= max;
+        if (start > end || end < tMin)
+        {
+            return false;
+        }
+
+        if (start > tMin)
+        {
+            tMin = start;
+        }
+        else
+        {
+            tMin = end;
+        }
+
+        return true;
     }
 
     RaycastResult RayTracer::intersectTriangles(const Vec3f& orig, const Vec3f& dir, const size_t startPrim,
