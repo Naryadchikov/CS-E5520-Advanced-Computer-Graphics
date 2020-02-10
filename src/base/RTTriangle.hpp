@@ -84,7 +84,10 @@ namespace FW
             return (m_vertices[0].p + m_vertices[1].p + m_vertices[2].p) * (1.0f / 3.0f);
         }
 
-		// TODO: return bb centroids of triangle function
+        inline Vec3f bbCentroid() const
+        {
+            return 0.5f * (max() + min());
+        }
 
         inline float area() const
         {

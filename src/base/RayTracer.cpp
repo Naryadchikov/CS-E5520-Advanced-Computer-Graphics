@@ -28,21 +28,21 @@ namespace FW
         x = std::modf(uv.x, &i);
         y = std::modf(uv.y, &i);
 
-		if (x < 0.f)
-		{
-			x += 1.f;
-		}
-		
-		if (y < 0.f)
-		{
-			y += 1.f;
-		}
-        
-		int ix = x * size.x;
-		int iy = y * size.y;
+        if (x < 0.f)
+        {
+            x += 1.f;
+        }
 
-		ix = FW::clamp(ix, 0, size.x);
-		iy = FW::clamp(iy, 0, size.y);
+        if (y < 0.f)
+        {
+            y += 1.f;
+        }
+
+        int ix = x * size.x;
+        int iy = y * size.y;
+
+        ix = FW::clamp(ix, 0, size.x);
+        iy = FW::clamp(iy, 0, size.y);
 
         return Vec2f(ix, iy);
     }
@@ -140,15 +140,15 @@ namespace FW
         // function to do one-off things per ray like finding the elementwise
         // reciprocal of the ray direction.
         float tMin = 1.f;
-		Vec3f iDir = 1.f / dir;
+        Vec3f iDir = 1.f / dir;
 
         return intersectNode(orig, dir, iDir, m_bvh.root(), tMin);
     }
 
-    RaycastResult RayTracer::intersectNode(const Vec3f& orig, const Vec3f& dir, const Vec3f& iDir, const BvhNode& node, float& tMin) const
+    RaycastResult RayTracer::intersectNode(const Vec3f& orig, const Vec3f& dir, const Vec3f& iDir, const BvhNode& node,
+                                           float& tMin) const
     {
-        // do it for children nodes to reduce recursion (if triangle from one child is in front of next BB -> skip)
-		if (!isIntersectedWithBB(orig, iDir, node.bb, tMin))
+        if (!isIntersectedWithBB(orig, iDir, node.bb, tMin))
         {
             return RaycastResult();
         }
@@ -177,7 +177,7 @@ namespace FW
         float start = FW::min(t1, t2).max();
         float end = FW::max(t1, t2).min();
 
-		if (start > end || end < 0 || start > tMin)
+        if (start > end || end < 0 || start > tMin)
         {
             return false;
         }
@@ -207,11 +207,11 @@ namespace FW
             }
         }
 
-		if (imin != -1)
-		{
-			tMin = tmin;
-			return RaycastResult(&(*m_triangles)[m_bvh.getIndex(imin)], tmin, umin, vmin, orig + tmin * dir, orig, dir);
-		}
+        if (imin != -1)
+        {
+            tMin = tmin;
+            return RaycastResult(&(*m_triangles)[m_bvh.getIndex(imin)], tmin, umin, vmin, orig + tmin * dir, orig, dir);
+        }
 
         return RaycastResult();
     }

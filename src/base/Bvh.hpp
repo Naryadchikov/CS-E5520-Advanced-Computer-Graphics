@@ -48,6 +48,8 @@ namespace FW
 
         void constructTree_ObjectMedian(std::unique_ptr<BvhNode>& node);
 
-        std::pair<Vec3f, Vec3f> getBVPoints(size_t startPrim, size_t endPrim);
+        std::pair<Vec3f, Vec3f> getBBPoints(size_t startPrim, size_t endPrim);
+
+        static int getLongestAxis(const std::pair<Vec3f, Vec3f> bbPoints);
     };
 }

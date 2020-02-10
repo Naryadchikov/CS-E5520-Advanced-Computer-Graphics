@@ -49,22 +49,14 @@ namespace FW
 
         switch (mode_)
         {
-        case SplitMode_SpatialMedian:
+        case SplitMode_ObjectMedian:
             {
-                constructTree_SpatialMedian(rootNode_);
-
+                constructTree_ObjectMedian(rootNode_);
                 break;
             }
-        case SplitMode_ObjectMedian: default:
-            { // find longest axis before sorting
-                std::stable_sort(indices_.begin(), indices_.end(),
-                                 [&triangles](uint32_t i1, uint32_t i2)
-                                 {
-                                     return triangles[i1].centroid().y < triangles[i2].centroid().y;
-                                 });
-
-                constructTree_ObjectMedian(rootNode_);
-
+        case SplitMode_SpatialMedian: default:
+            {
+                constructTree_SpatialMedian(rootNode_);
                 break;
             }
         }
@@ -93,14 +85,21 @@ namespace FW
 
     void Bvh::constructTree_ObjectMedian(std::unique_ptr<BvhNode>& node)
     {
-        std::pair<Vec3f, Vec3f> bvPoints = getBVPoints(node->startPrim, node->endPrim);
+        std::pair<Vec3f, Vec3f> bbPoints = getBBPoints(node->startPrim, node->endPrim);
 
-        node->bb = AABB(bvPoints.first, bvPoints.second);
-		
-		// sort here from node->startPrim to node->endPrim according to longest axis of current node
+        node->bb = AABB(bbPoints.first, bbPoints.second);
 
         if (node->endPrim - node->startPrim + 1 > MAX_TRIS_PER_LEAF)
         {
+            int longestAxis = getLongestAxis(bbPoints);
+
+            std::stable_sort(indices_.begin() + node->startPrim, indices_.begin() + node->endPrim + 1,
+                             [&](uint32_t i1, uint32_t i2)
+                             {
+                                 return (*triangles_ptr)[i1].bbCentroid()[longestAxis] <
+                                     (*triangles_ptr)[i2].bbCentroid()[longestAxis];
+                             });
+
             size_t splitIndex = (node->endPrim + node->startPrim) / 2;
 
             node->left.reset(new BvhNode(node->startPrim, splitIndex - 1));
@@ -113,38 +112,25 @@ namespace FW
 
     void Bvh::constructTree_SpatialMedian(std::unique_ptr<BvhNode>& node)
     {
-        std::pair<Vec3f, Vec3f> bvPoints = getBVPoints(node->startPrim, node->endPrim);
+        std::pair<Vec3f, Vec3f> bbPoints = getBBPoints(node->startPrim, node->endPrim);
 
-        node->bb = AABB(bvPoints.first, bvPoints.second);
+        node->bb = AABB(bbPoints.first, bbPoints.second);
 
         if (node->endPrim - node->startPrim + 1 > MAX_TRIS_PER_LEAF)
         {
-            size_t longestAxis = 0;
-            Vec3f bvDiagonal = bvPoints.second - bvPoints.first;
-            float longestAxisDistance = bvDiagonal.max();
-
-            if (bvDiagonal.y == longestAxisDistance)
-            {
-                longestAxis = 1;
-            }
-            if (bvDiagonal.z == longestAxisDistance)
-            {
-                longestAxis = 2;
-            }
-
+            int longestAxis = getLongestAxis(bbPoints);
             size_t splitIndex = std::stable_partition(indices_.begin() + node->startPrim,
                                                       indices_.begin() + node->endPrim + 1,
                                                       [&](uint32_t n)
-                                                      { // change all triangles centroid to bb centroids of triangle
-                                                          return (*triangles_ptr)[n].centroid()[longestAxis]
-                                                              <
-                                                              (bvPoints.second[longestAxis] +
-                                                                  bvPoints.first[longestAxis]) * 0.5f;
+                                                      {
+                                                          return (*triangles_ptr)[n].bbCentroid()[longestAxis]
+                                                              < (bbPoints.second[longestAxis] +
+                                                                  bbPoints.first[longestAxis]) * 0.5f;
                                                       }) - indices_.begin();
 
             if (splitIndex - 1 == node->endPrim || splitIndex == node->startPrim)
             {
-				splitIndex = (node->endPrim + node->startPrim) / 2;
+                splitIndex = (node->endPrim + node->startPrim) / 2;
             }
 
             node->left.reset(new BvhNode(node->startPrim, splitIndex - 1));
@@ -155,7 +141,7 @@ namespace FW
         }
     }
 
-    std::pair<Vec3f, Vec3f> Bvh::getBVPoints(size_t startPrim, size_t endPrim)
+    std::pair<Vec3f, Vec3f> Bvh::getBBPoints(size_t startPrim, size_t endPrim)
     {
         Vec3f min(std::numeric_limits<float>::max());
         Vec3f max(-std::numeric_limits<float>::max());
@@ -172,5 +158,23 @@ namespace FW
         }
 
         return std::make_pair(min, max);
+    }
+
+    int Bvh::getLongestAxis(const std::pair<Vec3f, Vec3f> bbPoints)
+    {
+        int longestAxis = 0;
+        Vec3f bbDiagonal = bbPoints.second - bbPoints.first;
+        float longestAxisDistance = bbDiagonal.max();
+
+        if (bbDiagonal.y == longestAxisDistance)
+        {
+            longestAxis = 1;
+        }
+        if (bbDiagonal.z == longestAxisDistance)
+        {
+            longestAxis = 2;
+        }
+
+        return longestAxis;
     }
 }
