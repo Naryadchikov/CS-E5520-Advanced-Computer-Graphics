@@ -56,11 +56,11 @@ namespace FW
                 break;
             }
         case SplitMode_ObjectMedian: default:
-            {
+            { // find longest axis before sorting
                 std::stable_sort(indices_.begin(), indices_.end(),
-                                 [&triangles](size_t i1, size_t i2)
+                                 [&triangles](uint32_t i1, uint32_t i2)
                                  {
-                                     return triangles[i1].centroid().x < triangles[i2].centroid().x;
+                                     return triangles[i1].centroid().y < triangles[i2].centroid().y;
                                  });
 
                 constructTree_ObjectMedian(rootNode_);
@@ -96,6 +96,8 @@ namespace FW
         std::pair<Vec3f, Vec3f> bvPoints = getBVPoints(node->startPrim, node->endPrim);
 
         node->bb = AABB(bvPoints.first, bvPoints.second);
+		
+		// sort here from node->startPrim to node->endPrim according to longest axis of current node
 
         if (node->endPrim - node->startPrim + 1 > MAX_TRIS_PER_LEAF)
         {
@@ -132,9 +134,9 @@ namespace FW
 
             size_t splitIndex = std::stable_partition(indices_.begin() + node->startPrim,
                                                       indices_.begin() + node->endPrim + 1,
-                                                      [&](size_t n)
-                                                      {
-                                                          return (*triangles_ptr)[indices_[n]].centroid()[longestAxis]
+                                                      [&](uint32_t n)
+                                                      { // change all triangles centroid to bb centroids of triangle
+                                                          return (*triangles_ptr)[n].centroid()[longestAxis]
                                                               <
                                                               (bvPoints.second[longestAxis] +
                                                                   bvPoints.first[longestAxis]) * 0.5f;
@@ -142,7 +144,7 @@ namespace FW
 
             if (splitIndex - 1 == node->endPrim || splitIndex == node->startPrim)
             {
-                return;
+				splitIndex = (node->endPrim + node->startPrim) / 2;
             }
 
             node->left.reset(new BvhNode(node->startPrim, splitIndex - 1));

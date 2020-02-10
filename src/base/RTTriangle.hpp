@@ -84,6 +84,8 @@ namespace FW
             return (m_vertices[0].p + m_vertices[1].p + m_vertices[2].p) * (1.0f / 3.0f);
         }
 
+		// TODO: return bb centroids of triangle function
+
         inline float area() const
         {
             return cross(m_vertices[1].p - m_vertices[0].p, m_vertices[2].p - m_vertices[0].p).length() * .5f;

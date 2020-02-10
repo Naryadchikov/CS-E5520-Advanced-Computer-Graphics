@@ -134,7 +134,7 @@ App::App(std::vector<std::string>& cmd_args)
     if (!m_settings.batch_render)
     {
         m_commonCtrl.loadState(m_commonCtrl.getStateFileName(1));
-        m_settings.splitMode = SplitMode_Sah;
+        m_settings.splitMode = SplitMode_SpatialMedian;
     }
     else
     {
