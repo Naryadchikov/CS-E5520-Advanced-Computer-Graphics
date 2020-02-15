@@ -27,7 +27,7 @@ I iterate by all 3 axis splitting current bounding box with plane within the 10%
 After split I calculate SAH score (area of newly formed bounding boxes) of primitives stayed to the left of the split plane and to the right.
 Best SAH score defines which splitIndex I would use for left and right subtrees separation.
 
-By experiment "MAX_TRIS_PER_LEAF_SAH" constant was selected with value "10". For my hardware it gives best performance.
+By experiment "MAX_TRIS_PER_LEAF_SAH" constant was selected as "10". For my hardware it gives best performance.
 
 Besides SAH, I've implemented ObjectMedian and SpatialMedian split modes.
 Depending on which split mode you pass to "Bvh" class constructor, bounding volume building type would be chosen (switch-case).
@@ -43,6 +43,7 @@ Solution hierarchy	 Unknown	~1.86	    5.1	 	Unknown
 
 
 Mrays/sec for same scene in your "reference_assignment1_64bit.exe": ~2.49 Mrays/sec
+
 So with SAH my tracer's perfomance matches yours.
 -----
 
@@ -63,4 +64,4 @@ I've been attending exercise sessions 3 times. Lauri and Pauli have helped me to
 # Any other comments you'd like to share about the assignment or the course so far?
 
 I've enjoyed working on assignment.
-I can say that every time I sit behind computer doing it I caught "flow" state, so it shows that task is interesting and challenging in the same time.
+I can say that every time I sit behind computer doing it I've been in "flow" state, so it shows that task is interesting and challenging in the same time.
