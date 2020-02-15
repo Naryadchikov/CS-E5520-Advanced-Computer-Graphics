@@ -6,6 +6,7 @@
 
 
 #define MAX_TRIS_PER_LEAF 3
+#define MAX_TRIS_PER_LEAF_SAH 10
 
 
 namespace FW
@@ -49,6 +50,15 @@ namespace FW
 
         switch (mode_)
         {
+        case SplitMode_None:
+            {
+                break;
+            }
+        case SplitMode_Sah:
+            {
+                constructTree_Sah(rootNode_);
+                break;
+            }
         case SplitMode_ObjectMedian:
             {
                 constructTree_ObjectMedian(rootNode_);
@@ -141,6 +151,71 @@ namespace FW
         }
     }
 
+    void Bvh::constructTree_Sah(std::unique_ptr<BvhNode>& node)
+    {
+        std::pair<Vec3f, Vec3f> bbPoints = getBBPoints(node->startPrim, node->endPrim);
+
+        node->bb = AABB(bbPoints.first, bbPoints.second);
+
+        if (node->endPrim - node->startPrim + 1 > MAX_TRIS_PER_LEAF_SAH)
+        {
+            size_t sahSplitIndex = node->startPrim;
+            float lowestScore = std::numeric_limits<float>::max();
+            float bestSplitPlaneCoord = 0.f;
+            int bestAxis = 0;
+
+            for (int axis = 0; axis < 3; ++axis)
+            {
+                float splitCoef = 0.1f;
+
+                while (splitCoef < 1.f)
+                {
+                    float splitPlaneCoord = bbPoints.first[axis] +
+                        (bbPoints.second[axis] - bbPoints.first[axis]) * splitCoef;
+
+                    size_t splitIndex = std::stable_partition(indices_.begin() + node->startPrim,
+                                                              indices_.begin() + node->endPrim + 1,
+                                                              [&](uint32_t n)
+                                                              {
+                                                                  return (*triangles_ptr)[n].bbCentroid()[axis] <
+                                                                      splitPlaneCoord;
+                                                              }) - indices_.begin();
+
+                    float currentScore = getSahScore(node->startPrim, node->endPrim, splitIndex);
+
+                    if (currentScore < lowestScore)
+                    {
+                        lowestScore = currentScore;
+                        sahSplitIndex = splitIndex;
+                        bestAxis = axis;
+                        bestSplitPlaneCoord = splitPlaneCoord;
+                    }
+
+                    splitCoef += 0.1f;
+                }
+            }
+
+            std::stable_partition(indices_.begin() + node->startPrim,
+                                  indices_.begin() + node->endPrim + 1,
+                                  [&](uint32_t n)
+                                  {
+                                      return (*triangles_ptr)[n].bbCentroid()[bestAxis] <
+                                          bestSplitPlaneCoord;
+                                  });
+
+            if (sahSplitIndex - 1 == node->endPrim || sahSplitIndex == node->startPrim)
+            {
+                sahSplitIndex = (node->endPrim + node->startPrim) / 2;
+            }
+
+            node->left.reset(new BvhNode(node->startPrim, sahSplitIndex - 1));
+            constructTree_Sah(node->left);
+
+            node->right.reset(new BvhNode(sahSplitIndex, node->endPrim));
+            constructTree_Sah(node->right);
+        }
+    }
+
     std::pair<Vec3f, Vec3f> Bvh::getBBPoints(size_t startPrim, size_t endPrim)
     {
         Vec3f min(std::numeric_limits<float>::max());
@@ -176,5 +251,37 @@ namespace FW
         }
 
         return longestAxis;
+    }
+
+    float Bvh::getSahScore(size_t startPrim, size_t endPrim, size_t splitIndex)
+    {
+        size_t nLeft = splitIndex - startPrim;
+        float aLeft = nLeft != 0
+                          ? getBBArea(startPrim, splitIndex - 1)
+                          : 0;
+
+        size_t nRight = endPrim - splitIndex + 1;
+        float aRight = nRight != 0
+                           ? getBBArea(splitIndex, endPrim)
+                           : 0;
+
+        return aLeft * nLeft + aRight * nRight;
+    }
+
+    float Bvh::getBBArea(size_t startPrim, size_t endPrim)
+    {
+        if (startPrim == endPrim)
+        {
+            return 0.f;
+        }
+
+        std::pair<Vec3f, Vec3f> bbPoints = getBBPoints(startPrim, endPrim);
+        Vec3f bbDiagonal = bbPoints.second - bbPoints.first;
+
+        return 2.f * (
+            FW::abs(bbDiagonal.x * bbDiagonal.y) +
+            FW::abs(bbDiagonal.x * bbDiagonal.z) +
+            FW::abs(bbDiagonal.y * bbDiagonal.z)
+        );
     }
 }

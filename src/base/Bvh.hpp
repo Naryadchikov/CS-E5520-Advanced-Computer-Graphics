@@ -48,8 +48,14 @@ namespace FW
 
         void constructTree_ObjectMedian(std::unique_ptr<BvhNode>& node);
 
+        void constructTree_Sah(std::unique_ptr<BvhNode>& node);
+
         std::pair<Vec3f, Vec3f> getBBPoints(size_t startPrim, size_t endPrim);
 
         static int getLongestAxis(const std::pair<Vec3f, Vec3f> bbPoints);
+
+        float getSahScore(size_t startPrim, size_t endPrim, size_t splitIndex);
+
+        float getBBArea(size_t startPrim, size_t endPrim);
     };
 }
