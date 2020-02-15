@@ -35,11 +35,11 @@ Depending on which split mode you pass to "Bvh" class constructor, bounding volu
 
 Comparison between hierarchies for "conference" scene (default view angle) with my traversal:
 
-			Build Time | Mrays/sec | Size (Mb)
-Spatial Median   	 < 1 sec	~0.74	   11.8
-Object Median    	 ~ 2 sec	~0.40	   10.9
-SAH		 	 ~ 6 sec	~2.23	    4.4
-Solution hierarchy	  Unknown	~1.86	    5.1
+			Build Time |  Mrays/sec | Size (Mb) | MAX_TRIS_PER_LEAF
+Spatial Median   	 < 1 sec	~0.74	   11.8		   3
+Object Median    	 ~ 2 sec	~0.40	   10.9	   	   3
+SAH		 	 ~ 6 sec	~2.23	    4.4	   	  10
+Solution hierarchy	 Unknown	~1.86	    5.1	 	Unknown
 
 
 Mrays/sec for same scene in your "reference_assignment1_64bit.exe": ~2.49 Mrays/sec
