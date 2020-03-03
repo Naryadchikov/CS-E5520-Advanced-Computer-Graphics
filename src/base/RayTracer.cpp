@@ -23,14 +23,55 @@ namespace FW
         // UV coordinates range from negative to positive infinity. First map them
         // to a range between 0 and 1 in order to support tiling textures, then
         // scale the coordinates by image resolution and find the nearest pixel.
+        float x, y, i;
 
-        return Vec2f();
+        x = std::modf(uv.x, &i);
+        y = std::modf(uv.y, &i);
+
+        if (x < 0.f)
+        {
+            x += 1.f;
+        }
+
+        if (y < 0.f)
+        {
+            y += 1.f;
+        }
+
+        int ix = x * size.x;
+        int iy = y * size.y;
+
+        ix = FW::clamp(ix, 0, size.x);
+        iy = FW::clamp(iy, 0, size.y);
+
+        return Vec2f(ix, iy);
     }
 
     Mat3f formBasis(const Vec3f& n)
     {
-        // YOUR CODE HERE (R4):
-        return Mat3f();
+        Vec3f q = n;
+        int idOfMin = 0;
+
+        for (int i = 1; i < 3; ++i)
+        {
+            if (FW::abs(n[idOfMin]) > FW::abs(n[i]))
+            {
+                idOfMin = i;
+            }
+        }
+
+        q[idOfMin] = 1.f;
+
+        Vec3f t = (FW::cross(q, n)).normalized();
+        Vec3f b = (FW::cross(n, t)).normalized();
+
+        Mat3f R;
+
+        R.setCol(0, t);
+        R.setCol(1, b);
+        R.setCol(2, n);
+
+        return R;
     }
 
 
@@ -81,6 +122,8 @@ namespace FW
     {
         // YOUR CODE HERE (R1):
         // This is where you should construct your BVH.
+        m_bvh = Bvh(triangles, splitMode);
+
         m_triangles = &triangles;
     }
 
@@ -96,20 +139,63 @@ namespace FW
         // function with the given ray and your root node. You can also use this
         // function to do one-off things per ray like finding the elementwise
         // reciprocal of the ray direction.
+        float tMin = 1.f;
+        Vec3f iDir = 1.f / dir;
 
-        // You can use this existing code for leaf nodes of the BVH (you do want to
-        // change the range of the loop to match the elements the leaf covers.)
+        return intersectNode(orig, dir, iDir, m_bvh.root(), tMin);
+    }
+
+    RaycastResult RayTracer::intersectNode(const Vec3f& orig, const Vec3f& dir, const Vec3f& iDir, const BvhNode& node,
+                                           float& tMin) const
+    {
+        if (!isIntersectedWithBB(orig, iDir, node.bb, tMin))
+        {
+            return RaycastResult();
+        }
+
+        if (!node.left && !node.right)
+        {
+            return intersectTriangles(orig, dir, node.startPrim, node.endPrim, tMin);
+        }
+
+        RaycastResult leftResult = intersectNode(orig, dir, iDir, *node.left, tMin);
+        RaycastResult rightResult = intersectNode(orig, dir, iDir, *node.right, tMin);
+
+        if (!leftResult.tri && !rightResult.tri)
+        {
+            return RaycastResult();
+        }
+
+        return leftResult.t < rightResult.t ? leftResult : rightResult;
+    }
+
+    bool RayTracer::isIntersectedWithBB(const Vec3f& orig, const Vec3f& iDir, const AABB& bb, float& tMin) const
+    {
+        Vec3f t1 = (bb.min - orig) * iDir;
+        Vec3f t2 = (bb.max - orig) * iDir;
+
+        float start = FW::min(t1, t2).max();
+        float end = FW::max(t1, t2).min();
+
+        if (start > end || end < 0 || start > tMin)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    RaycastResult RayTracer::intersectTriangles(const Vec3f& orig, const Vec3f& dir, const size_t startPrim,
+                                                const size_t endPrim, float& tMin) const
+    {
         float tmin = 1.0f, umin = 0.0f, vmin = 0.0f;
         int imin = -1;
 
-        RaycastResult castresult;
-
-        // Naive loop over all triangles; this will give you the correct results,
-        // but is terribly slow when ran for all triangles for each ray. Try it.
-        for (int i = 0; i < m_triangles->size(); ++i)
+        for (size_t i = startPrim; i <= endPrim; ++i)
         {
             float t, u, v;
-            if ((*m_triangles)[i].intersect_woop(orig, dir, t, u, v))
+
+            if ((*m_triangles)[m_bvh.getIndex(i)].intersect_woop(orig, dir, t, u, v))
             {
                 if (t > 0.0f && t < tmin)
                 {
@@ -122,8 +208,11 @@ namespace FW
         }
 
         if (imin != -1)
-            castresult = RaycastResult(&(*m_triangles)[imin], tmin, umin, vmin, orig + tmin * dir, orig, dir);
+        {
+            tMin = tmin;
+            return RaycastResult(&(*m_triangles)[m_bvh.getIndex(imin)], tmin, umin, vmin, orig + tmin * dir, orig, dir);
+        }
 
-        return castresult;
+        return RaycastResult();
     }
 } // namespace FW

@@ -17,6 +17,7 @@ namespace FW
 
         Bvh();
         Bvh(std::istream& is);
+        Bvh(std::vector<RTTriangle>& triangles, SplitMode splitMode);
 
         // move assignment for performance
         Bvh& operator=(Bvh&& other)
@@ -36,10 +37,25 @@ namespace FW
 
     private:
 
-
         SplitMode mode_;
         std::unique_ptr<BvhNode> rootNode_;
 
         std::vector<uint32_t> indices_; // triangle index list that will be sorted during BVH construction
+
+        std::vector<RTTriangle>* triangles_ptr;
+
+        void constructTree_SpatialMedian(std::unique_ptr<BvhNode>& node);
+
+        void constructTree_ObjectMedian(std::unique_ptr<BvhNode>& node);
+
+        void constructTree_Sah(std::unique_ptr<BvhNode>& node);
+
+        std::pair<Vec3f, Vec3f> getBBPoints(size_t startPrim, size_t endPrim);
+
+        static int getLongestAxis(const std::pair<Vec3f, Vec3f> bbPoints);
+
+        float getSahScore(size_t startPrim, size_t endPrim, size_t splitIndex);
+
+        float getBBArea(size_t startPrim, size_t endPrim);
     };
 }
